@@ -1,4 +1,5 @@
-from flask import Blueprint, make_response, request, jsonify
+from functools import wraps
+from flask import Blueprint, current_app, make_response, request, jsonify
 from ..models import db, User
 from ..config import Config
 import bcrypt
@@ -29,7 +30,7 @@ def register():
 def login():
     if request.method == 'POST':
         data = request.get_json()
-        print(data)
+        
         username = data.get('username')
         password = data.get('password')
 
@@ -40,7 +41,7 @@ def login():
         jwt_token = jwt.encode({
             'user_id': user.id,
             'username': user.username,
-            'role': 'viewer',  # custom claim
+            'role': user.role,
             'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=1)
         }, Config.SECRET_KEY, algorithm='HS256')
 
@@ -48,22 +49,48 @@ def login():
         response.set_cookie('access_token', jwt_token, httponly=True)
         return response
 
-@auth_bp.route('/admin', methods=['GET'])
-def admin():
-    token = request.cookies.get('access_token')
-    
-    if not token:
-        return jsonify({'error': 'Missing token'}), 401
-    
-    try:
-        payload = jwt.decode(token, Config.SECRET_KEY, algorithms='HS256')
-        print(payload)
-    except jwt.ExpiredSignatureError:
-        return jsonify({'error': 'Token expired'}), 401
-    except jwt.InvalidTokenError:
-        return jsonify({'error': 'Invalid token'}), 401
+def jwt_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = request.cookies.get('access_token')
 
-    if payload.get("role") == 'admin':
-        return jsonify({"message": payload}), 200
-    
-    return jsonify({"message": "You are not an admin"}), 401
+        if not token:
+            return jsonify({'error': 'Token is missing'}), 401
+        try:
+            payload = jwt.decode(token,Config.SECRET_KEY, algorithms=['HS256'])
+            request.user = payload  # attach user data to request
+        except jwt.ExpiredSignatureError:
+            return jsonify({'error': 'Token expired'}), 401
+        except jwt.InvalidTokenError:
+            return jsonify({'error': 'Invalid token'}), 401
+
+        return f(*args, **kwargs)
+
+    return decorated
+
+def role_required(required_role):
+    def wrapper(f):
+        @wraps(f)
+        def decorated(*args, **kwargs):
+            user = getattr(request, 'user', None)
+            if not user or user.get('role') != required_role:
+                return jsonify({'error': f'{required_role.capitalize()} role required'}), 403
+            return f(*args, **kwargs)
+        return decorated
+    return wrapper
+
+@auth_bp.route('/promote/<int:user_id>', methods=['POST'])
+@jwt_required
+@role_required('admin')
+def promote_user(user_id):
+    current_user = request.user
+    if current_user['role'] != 'admin':
+        return jsonify({"error": "Only admins can promote users"}), 403
+
+    user = User.query.get_or_404(user_id)
+    user.role = 'admin'
+    db.session.commit()
+
+    return jsonify({"message": f"{user.username} promoted to admin"})
+
+
