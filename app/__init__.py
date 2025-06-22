@@ -19,9 +19,11 @@ def create_app():
     from app.routes.auth import auth_bp
     from app.routes.beans import bean_bp
     from app.routes.roaster import roaster_bp
+    from app.routes.review import review_bp
     # Set auth paths
     app.register_blueprint(auth_bp)
     app.register_blueprint(bean_bp)
     app.register_blueprint(roaster_bp)
+    app.register_blueprint(review_bp)
 
     return app

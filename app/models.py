@@ -7,6 +7,7 @@ class User(db.Model):
     username = db.Column(db.String(150), unique=True, nullable=False)
     password_hash = db.Column(db.String(128), nullable=False)
     role = db.Column(db.String(128), nullable=False, default='viewer')
+    reviews = db.relationship('Review', back_populates='user', lazy=True, cascade='all, delete-orphan')
 
     def __repr__(self):
         return f"<User {self.id}: Username: {self.username} | role: {self.role}>"
@@ -34,9 +35,10 @@ class Bean(db.Model):
     price_per_100_grams = db.Column(db.Float, nullable=False)
     roaster_id = db.Column(db.Integer, db.ForeignKey('roaster.id'), nullable=False)
     roaster = db.relationship('Roaster', back_populates='beans')
-
+    reviews = db.relationship('Review', back_populates='bean', cascade='all, delete-orphan')
+    
     def __repr__(self):
-        return f"Bean {self.id}: {self.name}; Roaster: {self.roaster_id}"
+        return f"<Bean {self.id}: {self.name}; Roaster: {self.roaster_id}>"
     
     def to_dict(self):
         return {
@@ -47,4 +49,23 @@ class Bean(db.Model):
             'price_per_100_grams': self.price_per_100_grams,
             'roaster_id': self.roaster_id,
             'roaster_name': self.roaster.name if self.roaster else None
+        }
+    
+class Review(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user = db.relationship('User', back_populates='reviews')
+    bean_id = db.Column(db.Integer, db.ForeignKey('bean.id'), nullable=False)
+    bean = db.relationship('Bean', back_populates='reviews')
+    content = db.Column(db.String(150), nullable=False)
+    rating = db.Column(db.Float, nullable=False)
+
+    def __repr__(self):
+        return f"Review {self.id}: User: {self.user_id}; Bean: {self.bean_id}; Rating: {self.rating}; Content: {self.content}"
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'user': self.user_id,
+            'username': self.user.username if self.user else None,
         }

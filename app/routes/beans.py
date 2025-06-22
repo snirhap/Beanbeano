@@ -48,7 +48,7 @@ def view_bean(id):
         bean = Bean.query.get_or_404(id)
         return jsonify({"message": f'Bean details: {bean.to_dict()}'})
 
-@bean_bp.route('/view_bean/<int:id>', methods=['GET', 'POST'])
+@bean_bp.route('/delete_bean/<int:id>', methods=['GET', 'POST'])
 def delete_bean(id):
     if request.method == 'POST':
         bean = Bean.query.get_or_404(id)
