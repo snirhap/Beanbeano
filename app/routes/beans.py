@@ -1,5 +1,6 @@
 from flask import Blueprint, make_response, request, jsonify
-from ..models import db, Bean, Roaster
+from app.routes.auth import jwt_required
+from ..models import db, func, Bean, Roaster, Review, User
 from ..config import Config
 import bcrypt
 import jwt
@@ -46,7 +47,35 @@ def update_bean():
 def view_bean(id):
     if request.method == 'GET':
         bean = Bean.query.get_or_404(id)
-        return jsonify({"message": f'Bean details: {bean.to_dict()}'})
+        return jsonify({**bean.to_dict(), **{"average_rating": bean.avg_rating}})
+    
+@bean_bp.route('/view_bean/<int:bean_id>/add_review', methods=['POST'])
+@jwt_required
+def add_bean_review(bean_id):
+    if request.method == 'POST':
+        data = request.get_json()
+        content = data.get("content")
+        rating = data.get("rating")
+
+        # Validate input
+        if not content or not isinstance(rating, (int, float)):
+            return jsonify({"error": "Invalid review data"}), 400
+        
+        current_user = request.user
+        user = User.query.filter_by(id=current_user.get("user_id")).first()
+        bean = Bean.query.filter_by(id=bean_id).first()
+
+        existed_review = Review.query.filter_by(user_id=user.id, bean_id=bean.id).first()
+        if existed_review:
+            return jsonify({"error": "User already reviewed this bean"}), 409
+        
+        try:
+            new_review = Review(user_id=user.id, bean_id=bean.id, content=content, rating=rating)
+            db.session.add(new_review)
+            db.session.commit()
+            return jsonify({"message": f'Review was added. Details: {new_review.to_dict()}'}), 201
+        except Exception as e:
+            return jsonify({"Error": f"User or Bean not found. Error: {e}"}), 500
 
 @bean_bp.route('/delete_bean/<int:id>', methods=['GET', 'POST'])
 def delete_bean(id):

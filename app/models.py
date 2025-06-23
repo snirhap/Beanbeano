@@ -1,5 +1,5 @@
 from flask_sqlalchemy import SQLAlchemy
-
+from sqlalchemy import func
 db = SQLAlchemy()
 
 class User(db.Model):
@@ -48,8 +48,13 @@ class Bean(db.Model):
             'origin': self.origin,
             'price_per_100_grams': self.price_per_100_grams,
             'roaster_id': self.roaster_id,
-            'roaster_name': self.roaster.name if self.roaster else None
+            'roaster_name': self.roaster.name if self.roaster else None,
+            'reviews': [review.to_dict() for review in self.reviews] if self.reviews else None
         }
+    
+    @property
+    def avg_rating(self):
+        return db.session.query(func.avg(Review.rating)).filter(Review.bean_id == self.id).scalar()
     
 class Review(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -68,4 +73,7 @@ class Review(db.Model):
             'id': self.id,
             'user': self.user_id,
             'username': self.user.username if self.user else None,
+            'bean_id': self.bean_id,
+            'content': self.content,
+            'rating': self.rating
         }

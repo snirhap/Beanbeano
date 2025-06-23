@@ -1,5 +1,5 @@
 from flask import Blueprint, make_response, request, jsonify
-from ..models import db, Roaster
+from ..models import db, Roaster, Review
 from ..config import Config
 import bcrypt
 import jwt
@@ -14,7 +14,6 @@ roaster_bp = Blueprint('roaster', __name__)
 def add_roaster():
     if request.method == 'POST':
 
-        # Check if admin
         user = request.user
         if user.get('role') != 'admin':
             return jsonify({'error': 'Permission denied'}), 403
@@ -48,7 +47,7 @@ def get_all_roasters():
 def view_roaster(id):
     if request.method == 'GET':
         roaster = Roaster.query.filter_by(id=id).first()
-        return jsonify({"message": f'roaster details: {roaster}'})
+        return jsonify(roaster.to_dict())
 
 @roaster_bp.route('/delete_roaster/<int:id>', methods=['GET', 'POST'])
 def delete_roaster(id):
