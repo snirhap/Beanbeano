@@ -17,6 +17,11 @@ class Roaster(db.Model):
     name = db.Column(db.String(150), unique=True, nullable=False)
     beans = db.relationship('Bean', back_populates='roaster', lazy=True, cascade='all, delete-orphan')
 
+    @property
+    def avg_rating(self):
+            ratings = [bean.avg_rating for bean in self.beans if bean.avg_rating is not None]
+            return round(sum(ratings) / len(ratings), 2) if ratings else None
+
     def __repr__(self):
         return f"<Roaster {self.id}: {self.name}>"
 
@@ -24,6 +29,7 @@ class Roaster(db.Model):
         return {
             'id': self.id,
             'name': self.name,
+            'avg_rating': self.avg_rating,
             'beans': [bean.to_dict() for bean in self.beans]
         }
 

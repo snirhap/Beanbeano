@@ -16,7 +16,10 @@ def add_review():
 
         if not Review.query.filter_by(name=data.get("name")):
              return jsonify({"error:": "review doesn't exist"}), 500
+        elif "rating" in data and 1 <= data.get("rating") <= 5:
+            return jsonify({"error:": "Invalid review rating (must be between 1 and 5)"}), 400
         try:
+
             new_review = Review(**data)
         except Exception as err:
             return jsonify({"error:": err}), 500
