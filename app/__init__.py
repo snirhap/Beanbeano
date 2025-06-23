@@ -14,7 +14,7 @@ def create_app():
     
     @app.route('/')
     def home():
-        return "Welcome to the Home Brew Coffee Review API!"
+        return jsonify({"message": "Welcome to the Home Brew Coffee Review API!"})
 
     from app.routes.auth import auth_bp
     from app.routes.beans import bean_bp
