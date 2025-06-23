@@ -4,9 +4,9 @@ from .config import Config
 from app.models import db
 
 
-def create_app():
+def create_app(config_obj: Config):
     app = Flask(__name__)
-    app.config.from_object(Config)
+    app.config.from_object(config_obj)
 
     db.init_app(app)
     

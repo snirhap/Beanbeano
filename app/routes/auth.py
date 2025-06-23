@@ -14,7 +14,6 @@ def register():
         data = request.get_json()
         username = data.get('username')
         password = data.get('password')
-        print(f'{username} {password}')
 
         if User.query.filter_by(username=username).first():
             return jsonify({"error": f"User {username} already exist in DB"}), 400
