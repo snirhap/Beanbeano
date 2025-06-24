@@ -28,10 +28,35 @@ def add_review():
         db.session.commit()
         return jsonify({"message": f"New review {data.get('name')} was created successfully"}), 201
 
-@review_bp.route('/update_review', methods=['GET', 'POST'])
-def update_review():
-    if request.method == 'POST':
-        pass
+@review_bp.route('/edit_review/<int:review_id>', methods=['GET', 'PATCH'])
+@jwt_required
+def edit_review(review_id):
+    if request.method == 'PATCH':
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+
+        review = Review.query.get_or_404(review_id)
+
+        # Check that user owns review
+        current_user = request.user
+        if current_user['user_id'] != review.user_id:
+            return jsonify({'message': 'Review belongs to other user'}), 401
+
+        if 'rating' in data:
+            try:
+                rating = float(data['rating'])
+                if not (1 <= rating <= 5):
+                    return jsonify({'error': 'Rating must be between 1 and 5'}), 400
+            except ValueError:
+                return jsonify({'error': 'Rating must be a number'}), 400
+            
+        for key, value in data.items():
+            if key in review.allowed_fields:
+                setattr(review, key, value)
+
+        db.session.commit()
+        return jsonify({'message': 'Review was updated', 'Review': review.to_dict()}), 200
 
 @review_bp.route('/get_all_reviews', methods=['GET'])
 def get_all_reviews():

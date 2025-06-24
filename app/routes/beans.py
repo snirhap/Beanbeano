@@ -24,24 +24,19 @@ def add_bean():
         db.session.commit()
         return jsonify({"message": f"New Bean {data.get('name')} was created successfully"}), 201
 
-@bean_bp.route('/update_bean', methods=['GET', 'POST'])
-def update_bean():
-    if request.method == 'POST':
-        pass
-        # data = request.get_json()
-        # username = data.get('username')
-        # password = data.get('password')
-        # print(f'{username} {password}')
+@bean_bp.route('/edit_bean/<int:bean_id>', methods=['GET', 'PATCH'])
+@jwt_required
+def edit_bean(bean_id):
+    if request.method == 'PATCH':
+        data = request.get_json()
+        bean = Bean.query.get_or_404(bean_id)
 
-        # if User.query.filter_by(username=username).first():
-        #     return jsonify({"error": f"User {username} already exist in DB"}), 400
-        
-        # hashed_password = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
-        # new_user = User(username=username, password_hash=hashed_password)
-        # db.session.add(new_user)
-        # db.session.commit()
-        
-        # return jsonify({"message": f"User {username} was created successfully"}), 201
+        for key, value in data.items():
+            if key in bean.allowed_fields:
+                setattr(bean, key, value)
+
+        db.session.commit()
+        return jsonify({'message': 'Bean updated', 'Bean': bean.to_dict()}), 200
 
 @bean_bp.route('/view_bean/<int:id>', methods=['GET', 'POST'])
 def view_bean(id):

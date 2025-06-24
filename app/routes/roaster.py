@@ -31,10 +31,20 @@ def add_roaster():
         db.session.commit()
         return jsonify({"message": f"New roaster {data.get('name')} was created successfully"}), 201
 
-@roaster_bp.route('/update_roaster', methods=['GET', 'POST'])
-def update_roaster():
-    if request.method == 'POST':
-        pass
+@roaster_bp.route('/edit_roaster/<int:roaster_id>', methods=['GET', 'PATCH'])
+@jwt_required
+def edit_roaster(roaster_id):
+    if request.method == 'PATCH':
+        data = request.get_json()
+        roaster = Roaster.query.get_or_404(roaster_id)
+
+        for key, value in data.items():
+            if key in roaster.allowed_fields:
+                setattr(roaster, key, value)
+
+        db.session.commit()
+        return jsonify({'message': 'Roaster updated', 'roaster': roaster.to_dict()}), 200
+
 
 @roaster_bp.route('/get_all_roasters', methods=['GET'])
 def get_all_roasters():
@@ -55,4 +65,4 @@ def delete_roaster(id):
         roaster = roaster.query.get_or_404(id)
         db.session.delete(roaster)
         db.session.commit()
-        return jsonify({"message": "roaster was deleted"})
+        return jsonify({"message": f"roaster {roaster.name} was deleted"})

@@ -15,7 +15,13 @@ class User(db.Model):
 class Roaster(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(150), unique=True, nullable=False)
+    address = db.Column(db.String(150), unique=True, nullable=False)
+    website = db.Column(db.String(150), unique=True, nullable=False)
     beans = db.relationship('Bean', back_populates='roaster', lazy=True, cascade='all, delete-orphan')
+
+    @property
+    def allowed_fields(self):
+        return {'name', 'address', 'website'}
 
     @property
     def avg_rating(self):
@@ -43,6 +49,10 @@ class Bean(db.Model):
     roaster = db.relationship('Roaster', back_populates='beans')
     reviews = db.relationship('Review', back_populates='bean', cascade='all, delete-orphan')
     
+    @property
+    def allowed_fields(self):
+        return {'name', 'roast_level', 'origin', 'price_per_100_grams'}
+
     def __repr__(self):
         return f"<Bean {self.id}: {self.name}; Roaster: {self.roaster_id}>"
     
@@ -71,6 +81,10 @@ class Review(db.Model):
     content = db.Column(db.String(150), nullable=False)
     rating = db.Column(db.Float, nullable=False)
 
+    @property
+    def allowed_fields(self):
+        return {'content', 'rating'}
+    
     def __repr__(self):
         return f"Review {self.id}: User: {self.user_id}; Bean: {self.bean_id}; Rating: {self.rating}; Content: {self.content}"
     
