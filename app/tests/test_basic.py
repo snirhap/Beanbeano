@@ -96,12 +96,19 @@ def test_login_wrong_password(client):
     payload = {
         "username": "s_admin",
         "password": "1234567",
-        "username": "s_admin",
-        "password": "1234567"
     }
     response = client.post('/login', json=payload)
     assert response.status_code == 401
     assert response.get_json() == {"error": "Invalid Credentials"}
+
+def test_add_roaster(client):
+    pass
+
+def test_add_bean(client):
+    pass
+
+def test_add_review(client):
+    pass
 
 # def test_new_review_after_login(client):
     # payload = {
@@ -131,8 +138,7 @@ def test_login_wrong_password(client):
 #     response = client.post('/login', json=payload)
 #     print(response)
 #     assert response.status_code == 401
-#     assert response.get_json() == {'error': 'Invalid Credentials'}
-    assert response.get_json() == {"error": "Invalid Credentials"}
+#     assert response.get_json() == {"error": "Invalid Credentials"}
 
 # def test_new_review_after_login(client):
     # payload = {

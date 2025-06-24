@@ -1,8 +1,7 @@
-from flask import Flask, request, jsonify
+from flask import Flask, jsonify
 from flask_jwt_extended import JWTManager
 from .config import Config
 from app.models import db
-
 
 def create_app(config_obj: Config):
     app = Flask(__name__)

@@ -42,7 +42,7 @@ def login():
             'username': user.username,
             'role': user.role,
             'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=1)
-        }, Config.SECRET_KEY, algorithm='HS256')
+        }, Config.JWT_SECRET_KEY, algorithm='HS256')
 
         response = make_response(jsonify({'message': 'Login successful'}))
         response.set_cookie('access_token', jwt_token, httponly=True)
@@ -56,7 +56,7 @@ def jwt_required(f):
         if not token:
             return jsonify({'error': 'Token is missing'}), 401
         try:
-            payload = jwt.decode(token,Config.SECRET_KEY, algorithms=['HS256'])
+            payload = jwt.decode(token, Config.JWT_SECRET_KEY, algorithms=['HS256'])
             request.user = payload  # attach user data to request
         except jwt.ExpiredSignatureError:
             return jsonify({'error': 'Token expired'}), 401
