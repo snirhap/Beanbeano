@@ -6,3 +6,4 @@ python-dotenv
 bcrypt
 Flask-JWT-Extended
 pytest
+psycopg2-binary
