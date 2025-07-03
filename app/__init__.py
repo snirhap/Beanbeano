@@ -1,4 +1,5 @@
-from flask import Flask, jsonify
+import socket
+from flask import Flask, jsonify, request
 from flask_jwt_extended import JWTManager
 from .config import Config
 from app.models import db
@@ -13,7 +14,9 @@ def create_app(config_obj: Config):
     
     @app.route('/')
     def home():
-        return jsonify({"message": "Welcome to the Home Brew Coffee Review API!"})
+        hostname = socket.gethostname()
+        return jsonify({"message": 
+                        f"Welcome to the Home Brew Coffee Review API! Hello from port {hostname}!"})
 
     from app.routes.auth import auth_bp
     from app.routes.beans import bean_bp
