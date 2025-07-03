@@ -14,9 +14,7 @@ def create_app(config_obj: Config):
     
     @app.route('/')
     def home():
-        hostname = socket.gethostname()
-        return jsonify({"message": 
-                        f"Welcome to the Home Brew Coffee Review API! Hello from port {hostname}!"})
+        return jsonify({"message": f"Welcome to the Home Brew Coffee Review API!"})
 
     from app.routes.auth import auth_bp
     from app.routes.beans import bean_bp

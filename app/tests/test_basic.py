@@ -1,21 +1,11 @@
 import os
 import pytest
-from app import create_app, db, Config
-
-TEST_DB = os.path.abspath('test_temp.db')
-
-class TestConfig(Config):
-    SQLALCHEMY_DATABASE_URI = f'sqlite:///{TEST_DB}'
-from app import create_app, db, Config
-
-TEST_DB = os.path.abspath('test_temp.db')
-
-class TestConfig(Config):
-    SQLALCHEMY_DATABASE_URI = f'sqlite:///{TEST_DB}'
+from app import create_app, db
+from app.config import TestConfig, TEST_DB
 
 @pytest.fixture(scope='session')
 def app():
-    app = create_app(TestConfig)
+    app = create_app(config_obj=TestConfig)
 
     with app.app_context():
         db.create_all()
