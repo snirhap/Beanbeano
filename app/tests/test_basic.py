@@ -24,27 +24,6 @@ def client(app):
     with app.app_context():
         with app.test_client() as client:
             yield client
-@pytest.fixture(scope='session')
-def app():
-    app = create_app(TestConfig)
-
-    with app.app_context():
-        db.create_all()
-    yield app
-
-    # Clean up
-    with app.app_context():
-        db.drop_all()
-        db.session.remove()
-        db.engine.dispose()
-        if os.path.exists(TEST_DB):
-            os.remove(TEST_DB)
-
-@pytest.fixture(scope='function')
-def client(app):
-    with app.app_context():
-        with app.test_client() as client:
-            yield client
 
 def test_basic(client):
     response = client.get('/')

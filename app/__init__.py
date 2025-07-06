@@ -20,7 +20,7 @@ def create_app(config_obj: Config):
     from app.routes.beans import bean_bp
     from app.routes.roaster import roaster_bp
     from app.routes.review import review_bp
-    # Set auth paths
+
     app.register_blueprint(auth_bp)
     app.register_blueprint(bean_bp)
     app.register_blueprint(roaster_bp)
