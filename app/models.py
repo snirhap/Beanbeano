@@ -64,8 +64,7 @@ class Bean(db.Model):
             'origin': self.origin,
             'price_per_100_grams': self.price_per_100_grams,
             'roaster_id': self.roaster_id,
-            'roaster_name': self.roaster.name if self.roaster else None,
-            'reviews': [review.to_dict() for review in self.reviews] if self.reviews else None
+            'roaster_name': self.roaster.name if self.roaster else None
         }
     
     @property

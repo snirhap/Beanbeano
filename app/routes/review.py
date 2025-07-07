@@ -58,12 +58,24 @@ def edit_review(review_id):
         db.session.commit()
         return jsonify({'message': 'Review was updated', 'Review': review.to_dict()}), 200
 
-@review_bp.route('/get_all_reviews', methods=['GET'])
-def get_all_reviews():
-    reviews = Review.query.all()
-    if reviews:
-        return jsonify([r.to_dict() for r in reviews]), 200
-    return 'No reviews'
+
+@review_bp.route('/reviews/<int:bean_id>', methods=['GET'])
+def get_reviews_for_bean(bean_id):
+    page = request.args.get("page", 1, type=int)
+    per_page = request.args.get("limit", 10, type=int)
+    pagination = Review.query.filter_by(bean_id=bean_id).paginate(page=page, per_page=per_page, error_out=False)
+
+    if pagination.items:
+        return jsonify({
+            "page": pagination.page,
+            "limit": pagination.per_page,
+            "total": pagination.total,
+            "pages": pagination.pages,
+            "has_next": pagination.has_next,
+            "has_prev": pagination.has_prev,
+            "reviews": [r.to_dict() for r in pagination.items]
+        }), 200
+    return 'No reviews found for this bean', 404
 
 @review_bp.route('/view_review/<int:id>', methods=['GET', 'POST'])
 def view_review(id):
