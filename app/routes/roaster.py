@@ -13,7 +13,6 @@ roaster_bp = Blueprint('roaster', __name__)
 @role_required('admin')
 def add_roaster():
     if request.method == 'POST':
-
         user = request.user
         if user.get('role') != 'admin':
             return jsonify({'error': 'Permission denied'}), 403

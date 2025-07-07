@@ -1,5 +1,5 @@
 from flask import Blueprint, make_response, request, jsonify
-from ..models import db, Review
+from ..models import Bean, db, Review
 from ..config import Config
 import bcrypt
 import jwt
@@ -8,25 +8,24 @@ from .auth import jwt_required, role_required
 
 review_bp = Blueprint('review', __name__)
 
-@review_bp.route('/add_review', methods=['GET', 'POST'])
-@jwt_required
-def add_review():
-    if request.method == 'POST':
-        data = request.get_json()
+# @review_bp.route('/add_review', methods=['GET', 'POST'])
+# @jwt_required
+# def add_review():
+#     if request.method == 'POST':
+#         data = request.get_json()
 
-        if not Review.query.filter_by(name=data.get("name")):
-             return jsonify({"error:": "review doesn't exist"}), 500
-        elif "rating" in data and 1 <= data.get("rating") <= 5:
-            return jsonify({"error:": "Invalid review rating (must be between 1 and 5)"}), 400
-        try:
-
-            new_review = Review(**data)
-        except Exception as err:
-            return jsonify({"error:": err}), 500
+#         if not Review.query.filter_by(name=data.get("name")):
+#              return jsonify({"error:": "review doesn't exist"}), 500
+#         elif "rating" in data and 1 <= data.get("rating") <= 5:
+#             return jsonify({"error:": "Invalid review rating (must be between 1 and 5)"}), 400
+#         try:
+#             new_review = Review(**data)
+#         except Exception as err:
+#             return jsonify({"error:": err}), 500
         
-        db.session.add(new_review)
-        db.session.commit()
-        return jsonify({"message": f"New review {data.get('name')} was created successfully"}), 201
+#         db.session.add(new_review)
+#         db.session.commit()
+#         return jsonify({"message": f"New review {data.get('name')} was created successfully"}), 201
 
 @review_bp.route('/edit_review/<int:review_id>', methods=['GET', 'PATCH'])
 @jwt_required
@@ -63,19 +62,18 @@ def edit_review(review_id):
 def get_reviews_for_bean(bean_id):
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get("limit", 10, type=int)
+    bean = Bean.query.get_or_404(bean_id) # ensure the bean exists before querying reviews
     pagination = Review.query.filter_by(bean_id=bean_id).paginate(page=page, per_page=per_page, error_out=False)
 
-    if pagination.items:
-        return jsonify({
-            "page": pagination.page,
-            "limit": pagination.per_page,
-            "total": pagination.total,
-            "pages": pagination.pages,
-            "has_next": pagination.has_next,
-            "has_prev": pagination.has_prev,
-            "reviews": [r.to_dict() for r in pagination.items]
-        }), 200
-    return 'No reviews found for this bean', 404
+    return jsonify({
+        "page": pagination.page,
+        "limit": pagination.per_page,
+        "total": pagination.total,
+        "pages": pagination.pages,
+        "has_next": pagination.has_next,
+        "has_prev": pagination.has_prev,
+        "reviews": [r.to_dict() for r in pagination.items]
+    }), 200
 
 @review_bp.route('/view_review/<int:id>', methods=['GET', 'POST'])
 def view_review(id):

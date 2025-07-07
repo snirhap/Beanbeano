@@ -22,7 +22,7 @@ def add_bean():
         
         db.session.add(new_bean)
         db.session.commit()
-        return jsonify({"message": f"New Bean {data.get('name')} was created successfully"}), 201
+        return jsonify({"message": f"New bean {data.get('name')} was created successfully"}), 201
 
 @bean_bp.route('/edit_bean/<int:bean_id>', methods=['GET', 'PATCH'])
 @jwt_required
@@ -68,7 +68,7 @@ def add_bean_review(bean_id):
             new_review = Review(user_id=user.id, bean_id=bean.id, content=content, rating=rating)
             db.session.add(new_review)
             db.session.commit()
-            return jsonify({"message": f'Review was added. Details: {new_review.to_dict()}'}), 201
+            return jsonify({"message": f'Review was added'}), 201
         except Exception as e:
             return jsonify({"Error": f"User or Bean not found. Error: {e}"}), 500
 

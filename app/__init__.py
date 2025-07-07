@@ -1,4 +1,3 @@
-import socket
 from flask import Flask, jsonify, request
 from flask_jwt_extended import JWTManager
 from .config import Config

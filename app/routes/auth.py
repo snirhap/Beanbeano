@@ -82,10 +82,6 @@ def role_required(required_role):
 @jwt_required
 @role_required('admin')
 def promote_user(user_id):
-    current_user = request.user
-    if current_user['role'] != 'admin':
-        return jsonify({"error": "Only admins can promote users"}), 403
-
     user = User.query.get_or_404(user_id)
     user.role = 'admin'
     db.session.commit()
