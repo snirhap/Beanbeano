@@ -1,4 +1,5 @@
 import os
+import random
 from flask import Flask
 import pytest
 from app import create_app, db
@@ -25,7 +26,7 @@ def app():
         if os.path.exists(TEST_DB):
             os.remove(TEST_DB)
 
-@pytest.fixture(scope='function')
+@pytest.fixture(scope='session')
 def client(app: Flask):
     with app.app_context():
         with app.test_client() as client:
@@ -44,24 +45,30 @@ def register_user(client, app, username, password):
 def login(client, username, password):
     return client.post('/login', json={"username": username, "password": password})
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def admin_client(client, app):
     register_user(client, app, ADMIN_USERNAME, ADMIN_PASSWORD)
     login_and_set_cookie(client, ADMIN_USERNAME, ADMIN_PASSWORD)
     return client
 
-@pytest.fixture
+@pytest.fixture(scope="session")
+def regular_client(client, app):
+    register_user(client, app, "simple_user", "12345678")
+    login_and_set_cookie(client, "simple_user", "12345678")
+    return client
+
+@pytest.fixture(scope="session")
 def existing_roaster(app):
     roaster = Roaster(
         name="Test Roaster",
-        address="456 Existing Rd, Existing City, EC 67890",
-        website="https://existingroaster.com"
+        address=f"{random.randint(100, 999)} Existing Rd, Existing City, EC 67890",
+        website=f"https://existingroaster{random.randint(100, 999)}.com"
     )
     db.session.add(roaster)
     db.session.commit() 
     return roaster
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def existing_bean(app, existing_roaster):
     bean = Bean(
         name="Test Bean",
@@ -159,16 +166,16 @@ def test_add_review(admin_client, existing_bean):
         "content": "Great beans!",
         "rating": 4.5
     }
-    response = admin_client.post(f'/view_bean/{existing_bean.id}/add_review', json=review_payload)
+    response = admin_client.post(f'/add_review/{existing_bean.id}', json=review_payload)
     assert response.status_code == 201
     assert response.get_json() == {"message": f"Review was added"}
 
-    response = admin_client.post(f'/view_bean/{existing_bean.id}/add_review', json=review_payload)
+    response = admin_client.post(f'/add_review/{existing_bean.id}', json=review_payload)
     assert response.status_code == 409
     assert response.get_json() == {"error": f"User already reviewed this bean"}
 
-def test_get_reviews_for_existing_bean(client, app):
-    response = client.get('/reviews/1')
+def test_get_reviews_for_existing_bean(admin_client, existing_bean):
+    response = admin_client.get(f'/reviews/{existing_bean.id}')
     assert response.status_code == 200
     data = response.get_json()
     assert isinstance(data, dict)
@@ -181,6 +188,6 @@ def test_get_reviews_for_existing_bean(client, app):
     assert "reviews" in data
     assert isinstance(data["reviews"], list) and len(data["reviews"]) > 0
 
-def test_get_reviews_for_nonexistent_bean(client, app):
-    response = client.get('/reviews/999')
+def test_get_reviews_for_nonexistent_bean(admin_client):
+    response = admin_client.get('/reviews/999')
     assert response.status_code == 404
