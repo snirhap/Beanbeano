@@ -64,36 +64,46 @@ def paginated_data(f):
         return f(*args, **kwargs)
     return decorated
 
-@bean_bp.route('/beans/<int:bean_id>/reviews', methods=['GET'])
+
+@bean_bp.route('/beans/<int:bean_id>/reviews', methods=['GET', 'POST'])
+@jwt_required
 @paginated_data
 def bean_reviews(bean_id, page, per_page):
-    bean = Bean.query.get_or_404(bean_id) # ensure the bean exists before querying reviews
-    pagination = Review.query.filter_by(bean_id=bean_id).paginate(page=page, per_page=per_page, error_out=False)
+    if request.method == 'GET':
+        bean = Bean.query.get_or_404(bean_id)
+        pagination = Review.query.filter_by(bean_id=bean_id).paginate(page=page, per_page=per_page, error_out=False)
 
-    return jsonify({
-        "page": pagination.page,
-        "limit": pagination.per_page,
-        "total": pagination.total,
-        "pages": pagination.pages,
-        "has_next": pagination.has_next,
-        "has_prev": pagination.has_prev,
-        "reviews": [r.to_dict() for r in pagination.items]
-    }), 200
-
-@bean_bp.route('/beans/<int:bean_id>/reviews', methods=['POST'])
-@jwt_required
-def add_review(bean_id):
-    if request.method == 'POST':
+        return jsonify({
+            "page": pagination.page,
+            "limit": pagination.per_page,
+            "total": pagination.total,
+            "pages": pagination.pages,
+            "has_next": pagination.has_next,
+            "has_prev": pagination.has_prev,
+            "reviews": [r.to_dict() for r in pagination.items]
+        }), 200
+    
+    elif request.method == 'POST':
         data = request.get_json()
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+
         content = data.get("content")
         rating = data.get("rating")
 
         if not content or not isinstance(rating, (int, float)):
             return jsonify({"error": "Invalid review data"}), 400
         
-        current_user = request.user
+        if not (1 <= rating <= 5):
+            return jsonify({"error": "Rating must be between 1 and 5"}), 400
+
+        # Check if user is authenticated
+        current_user = getattr(request, "user", None)
         user = User.query.filter_by(id=current_user.get("user_id")).first()
-        bean = Bean.query.filter_by(id=bean_id).first()
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+
+        bean = Bean.query.get_or_404(bean_id)
 
         existed_review = Review.query.filter_by(user_id=user.id, bean_id=bean.id).first()
         if existed_review:
@@ -105,4 +115,4 @@ def add_review(bean_id):
             db.session.commit()
             return jsonify({"message": f'Review was added'}), 201
         except Exception as e:
-            return jsonify({"Error": f"User or Bean not found. Error: {e}"}), 500
+            return jsonify({"Error": f"Internal server error. Error: {e}"}), 500
