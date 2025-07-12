@@ -1,4 +1,4 @@
-from flask import Blueprint, make_response, request, jsonify
+from flask import Blueprint, g, make_response, request, jsonify
 from ..models import db, Roaster, Review
 from ..config import Config
 import bcrypt
@@ -13,7 +13,8 @@ roaster_bp = Blueprint('roaster', __name__)
 @role_required('admin')
 def add_roaster():
     if request.method == 'POST':
-        user = request.user
+        user = g.user
+        print(user)
         if user.get('role') != 'admin':
             return jsonify({'error': 'Permission denied'}), 403
         

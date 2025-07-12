@@ -1,5 +1,5 @@
 from functools import wraps
-from flask import Blueprint, make_response, request, jsonify
+from flask import Blueprint, g, make_response, request, jsonify
 from ..models import db, Bean, User, Review
 from .auth import jwt_required, role_required
 
@@ -22,7 +22,7 @@ def modify_or_delete_review(review_id):
         review = Review.query.get_or_404(review_id)
 
         # Check that user owns review
-        current_user = request.user
+        current_user = g.user
         if current_user['user_id'] != review.user_id:
             return jsonify({'message': 'Review belongs to other user'}), 401
 

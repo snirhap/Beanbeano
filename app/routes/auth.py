@@ -1,5 +1,5 @@
 from functools import wraps
-from flask import Blueprint, current_app, make_response, request, jsonify
+from flask import Blueprint, current_app, g, make_response, request, jsonify
 from ..models import db, User
 from ..config import Config
 import bcrypt
@@ -57,7 +57,7 @@ def jwt_required(f):
             return jsonify({'error': 'Token is missing'}), 401
         try:
             payload = jwt.decode(token, Config.JWT_SECRET_KEY, algorithms=['HS256'])
-            request.user = payload  # attach user data to request
+            g.user = payload  # attach user data to request
         except jwt.ExpiredSignatureError:
             return jsonify({'error': 'Token expired'}), 401
         except jwt.InvalidTokenError:
@@ -71,7 +71,7 @@ def role_required(required_role):
     def wrapper(f):
         @wraps(f)
         def decorated(*args, **kwargs):
-            user = getattr(request, 'user', None)
+            user = getattr(g, 'user', None)
             if not user or user.get('role') != required_role:
                 return jsonify({'error': f'{required_role.capitalize()} role required'}), 403
             return f(*args, **kwargs)

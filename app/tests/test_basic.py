@@ -45,6 +45,24 @@ def register_user(client, app, username, password):
 def login(client, username, password):
     return client.post('/login', json={"username": username, "password": password})
 
+def login_and_set_cookie(client, username, password):
+    response = client.post('/login', json={"username": username, "password": password})
+    cookie_header = response.headers.get('Set-Cookie')
+    
+    if cookie_header:
+        cookie = SimpleCookie()
+        cookie.load(cookie_header)
+        if 'access_token' in cookie:
+            token = cookie['access_token'].value
+
+            # Set the cookie in the client for subsequent requests
+            client.set_cookie(
+                domain='localhost',
+                key='access_token',
+                value=token
+            )
+    return response
+
 @pytest.fixture(scope="session")
 def admin_client(client, app):
     register_user(client, app, ADMIN_USERNAME, ADMIN_PASSWORD)
@@ -80,24 +98,6 @@ def existing_bean(app, existing_roaster):
     db.session.add(bean)
     db.session.commit()
     return bean
-
-def login_and_set_cookie(client, username, password):
-    response = client.post('/login', json={"username": username, "password": password})
-    cookie_header = response.headers.get('Set-Cookie')
-    
-    if cookie_header:
-        cookie = SimpleCookie()
-        cookie.load(cookie_header)
-        if 'access_token' in cookie:
-            token = cookie['access_token'].value
-
-            # Set the cookie in the client for subsequent requests
-            client.set_cookie(
-                domain='localhost',
-                key='access_token',
-                value=token
-            )
-    return response
 
 def test_basic(client):
     response = client.get('/')

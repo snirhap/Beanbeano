@@ -1,5 +1,5 @@
 from functools import wraps
-from flask import Blueprint, make_response, request, jsonify
+from flask import Blueprint, g, make_response, request, jsonify
 from app.routes.auth import jwt_required
 from ..models import db, func, Bean, Roaster, Review, User
 from ..config import Config
@@ -98,7 +98,7 @@ def bean_reviews(bean_id, page, per_page):
             return jsonify({"error": "Rating must be between 1 and 5"}), 400
 
         # Check if user is authenticated
-        current_user = getattr(request, "user", None)
+        current_user = g.user
         user = User.query.filter_by(id=current_user.get("user_id")).first()
         if not user:
             return jsonify({"error": "User not found"}), 404
