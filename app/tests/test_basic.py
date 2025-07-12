@@ -157,7 +157,7 @@ def test_add_bean(admin_client, existing_roaster):
         "price_per_100_grams": 12.99,
         "roaster_id": existing_roaster.id  # Use the existing roaster's ID
     }
-    response = admin_client.post('/add_bean', json=payload)
+    response = admin_client.post('/beans', json=payload)
     assert response.status_code == 201
     assert response.get_json() == {"message": "New bean Test Bean was created successfully"}
 
@@ -166,16 +166,16 @@ def test_add_review(admin_client, existing_bean):
         "content": "Great beans!",
         "rating": 4.5
     }
-    response = admin_client.post(f'/add_review/{existing_bean.id}', json=review_payload)
+    response = admin_client.post(f'/beans/{existing_bean.id}/reviews', json=review_payload)
     assert response.status_code == 201
     assert response.get_json() == {"message": f"Review was added"}
 
-    response = admin_client.post(f'/add_review/{existing_bean.id}', json=review_payload)
+    response = admin_client.post(f'/beans/{existing_bean.id}/reviews', json=review_payload)
     assert response.status_code == 409
     assert response.get_json() == {"error": f"User already reviewed this bean"}
 
 def test_get_reviews_for_existing_bean(admin_client, existing_bean):
-    response = admin_client.get(f'/reviews/{existing_bean.id}')
+    response = admin_client.get(f'beans/{existing_bean.id}/reviews')
     assert response.status_code == 200
     data = response.get_json()
     assert isinstance(data, dict)
@@ -189,5 +189,5 @@ def test_get_reviews_for_existing_bean(admin_client, existing_bean):
     assert isinstance(data["reviews"], list) and len(data["reviews"]) > 0
 
 def test_get_reviews_for_nonexistent_bean(admin_client):
-    response = admin_client.get('/reviews/999')
+    response = admin_client.get(f'beans/123456789/reviews')
     assert response.status_code == 404
