@@ -9,6 +9,7 @@ def create_app(config_obj: Config):
 
     db.init_app(app)
     
+    # Set up custom database manager for read/write session and engine handling
     app.db_manager = DatabaseManager(config_obj)
 
     @app.route('/')

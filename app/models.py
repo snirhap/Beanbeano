@@ -1,5 +1,6 @@
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import func
+# Initialize SQLAlchemy ORM for model definitions and metadata management
 db = SQLAlchemy()
 
 class User(db.Model):
