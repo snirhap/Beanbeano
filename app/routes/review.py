@@ -14,7 +14,6 @@ def modify_or_delete_review(review_id):
             if not review:
                 return jsonify({'error': 'Review does not exist'}), 404
             session.delete(review)
-            session.commit()
             return jsonify({"message": "Review was deleted"})
     
     elif request.method == 'PATCH':
@@ -43,8 +42,6 @@ def modify_or_delete_review(review_id):
             for key, value in data.items():
                 if key in review.allowed_fields:
                     setattr(review, key, value)
-
-            session.commit()
             return jsonify({'message': 'Review was updated', 'review': review.to_dict()}), 200
 
 @review_bp.route('/reviews/<int:review_id>', methods=['GET'])

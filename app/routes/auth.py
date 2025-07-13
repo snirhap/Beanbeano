@@ -22,7 +22,6 @@ def register():
         new_user = User(username=username, password_hash=hashed_password)
         with current_app.db_manager.get_write_session() as session:
             session.add(new_user)
-            session.commit()
         
         return jsonify({"message": f"User {username} was created successfully"}), 201
 
@@ -93,7 +92,6 @@ def promote_user(user_id):
         if not user:
             return jsonify({"error": "User not found"}), 404
         user.role = 'admin'
-        session.commit()
 
     return jsonify({"message": f"{user.username} promoted to admin"})
 

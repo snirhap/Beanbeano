@@ -43,7 +43,6 @@ def register_user(client, app, username, password):
     with current_app.db_manager.get_write_session() as session:
         user = session.query(User).filter_by(username=ADMIN_USERNAME).first()
         user.role = "admin"
-        session.commit()
     return response
 
 def login(client, username, password):
@@ -87,8 +86,11 @@ def existing_roaster(app) -> dict:
         website=f"https://existingroaster{random.randint(100, 999)}.com"
     )
     with app.db_manager.get_write_session() as session:
+        # Convert to dict before session closes to avoid DetachedInstanceError
         session.add(roaster)
-        session.commit()
+        # Flush to get the 'id', 
+        # Convert to dict before session closes to avoid DetachedInstanceError
+        session.flush()
         roaster_dict = roaster.to_dict()
     return roaster_dict
 
@@ -103,7 +105,9 @@ def existing_bean(app, existing_roaster) -> dict:
     )
     with app.db_manager.get_write_session() as session:
         session.add(bean)
-        session.commit()
+        # Flush to get the 'id', 
+        # Convert to dict before session closes to avoid DetachedInstanceError
+        session.flush()
         bean_dict = bean.to_dict()
     return bean_dict
 
@@ -158,6 +162,7 @@ def test_add_roaster(admin_client):
     assert response.get_json() == {"message": "New roaster Test Roaster 2 was created successfully"}
 
 def test_add_bean(admin_client, existing_roaster):
+    print(f'------ existing_roaster: {existing_roaster} -------')
     payload = {
         "name": "Test Bean",
         "roast_level": "Medium",
@@ -170,6 +175,8 @@ def test_add_bean(admin_client, existing_roaster):
     assert response.get_json() == {"message": "New bean Test Bean was created successfully"}
 
 def test_add_review(admin_client, existing_bean):
+    print(f'-----------------')
+    print(existing_bean)
     review_payload = {
         "content": "Great beans!",
         "rating": 4.5

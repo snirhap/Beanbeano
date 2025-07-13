@@ -19,9 +19,7 @@ def add_roaster():
         try:
             new_roaster = Roaster(**data)
             session.add(new_roaster)
-            session.commit()
         except Exception as err:
-            session.rollback()
             return jsonify({"error": f"Invalid input or DB error: {err}"}), 400
         
         return jsonify({"message": f"New roaster {data.get('name')} was created successfully"}), 201
@@ -50,7 +48,6 @@ def get_roaster(roaster_id):
             for key, value in data.items():
                 if key in roaster.allowed_fields:
                     setattr(roaster, key, value)
-            session.commit()
             return jsonify({'message': 'Roaster updated', 'roaster': roaster.to_dict()}), 200
     elif request.method == 'DELETE':
         with current_app.db_manager.get_write_session() as session:
@@ -58,7 +55,6 @@ def get_roaster(roaster_id):
             if not roaster:
                 return jsonify({"error": "Roaster doesn't exist"}), 404
             session.delete(roaster)
-            session.commit()
             return jsonify({"message": f"Roaster {roaster.name} was deleted"}), 200
 
 @roaster_bp.route('/get_all_roasters', methods=['GET'])

@@ -35,8 +35,6 @@ def get_bean(id):
             for key, value in data.items():
                 if key in bean.allowed_fields:
                     setattr(bean, key, value)
-
-            session.commit()
             return jsonify({'message': 'Bean updated', 'bean': bean.to_dict()}), 200
 
     elif request.method == 'DELETE':
@@ -46,7 +44,6 @@ def get_bean(id):
                 return jsonify({"error": "Bean not found"}), 404
             # Delete the bean
             session.delete(bean)
-            session.commit()
         return jsonify({"message": "Bean was deleted"})
 
 @bean_bp.route('/beans', methods=['POST'])
@@ -63,7 +60,6 @@ def add_bean():
         
         with current_app.db_manager.get_write_session() as session:
             session.add(new_bean)
-            session.commit()
         return jsonify({"message": f"New bean {data.get('name')} was created successfully"}), 201
 
 def paginated_data(f):
@@ -133,11 +129,10 @@ def bean_reviews(bean_id, page, per_page):
 
             if existed_review:
                 return jsonify({"error": "User already reviewed this bean"}), 409
-        
-        try:
-            new_review = Review(user_id=user.id, bean_id=bean.id, content=content, rating=rating)
-            session.add(new_review)
-            session.commit()
-            return jsonify({"message": f'Review was added'}), 201
-        except Exception as e:
-            return jsonify({"error": f"Internal server error. Error: {e}"}), 500
+
+            try:
+                new_review = Review(user_id=user.id, bean_id=bean.id, content=content, rating=rating)
+                session.add(new_review)
+                return jsonify({"message": f'Review was added'}), 201
+            except Exception as e:
+                return jsonify({"error": f"Internal server error. Error: {e}"}), 500
