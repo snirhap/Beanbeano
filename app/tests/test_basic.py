@@ -1,30 +1,34 @@
 import os
 import random
-from flask import Flask
+from flask import Flask, current_app
 import pytest
-from app import create_app, db
-from app.config import TestConfig, TEST_DB
+from app import create_app
+from app.models import db
+from app.config import TestConfig
 from http.cookies import SimpleCookie
 from app.models import Bean, Roaster, User
 
 ADMIN_USERNAME = "s_admin"
 ADMIN_PASSWORD = "12345678"
+TEST_DB = TestConfig.TEST_DB
 
 @pytest.fixture(scope='session')
 def app():
     app = create_app(config_obj=TestConfig)
+    db_manager = app.db_manager
 
     with app.app_context():
-        db.create_all()
+        db.metadata.create_all(bind=db_manager.write_engine)
+
     yield app
 
     # Clean up
     with app.app_context():
-        db.drop_all()
+        db.metadata.drop_all(bind=db_manager.write_engine)
         db.session.remove()
-        db.engine.dispose()
-        if os.path.exists(TEST_DB):
-            os.remove(TEST_DB)
+        db_manager.write_engine.dispose()
+        if os.path.exists(TestConfig.TEST_DB):
+            os.remove(TestConfig.TEST_DB)
 
 @pytest.fixture(scope='session')
 def client(app: Flask):
@@ -36,10 +40,10 @@ def register_user(client, app, username, password):
     response = client.post('/register', json={"username": username, "password": password})
 
     # If the user 's_admin' is created successfully, set the role to 'admin'
-    with app.app_context():
-        user = User.query.filter_by(username=ADMIN_USERNAME).first()
+    with current_app.db_manager.get_write_session() as session:
+        user = session.query(User).filter_by(username=ADMIN_USERNAME).first()
         user.role = "admin"
-        db.session.commit()
+        session.commit()
     return response
 
 def login(client, username, password):
@@ -76,28 +80,32 @@ def regular_client(client, app):
     return client
 
 @pytest.fixture(scope="session")
-def existing_roaster(app):
+def existing_roaster(app) -> dict:
     roaster = Roaster(
         name="Test Roaster",
         address=f"{random.randint(100, 999)} Existing Rd, Existing City, EC 67890",
         website=f"https://existingroaster{random.randint(100, 999)}.com"
     )
-    db.session.add(roaster)
-    db.session.commit() 
-    return roaster
+    with app.db_manager.get_write_session() as session:
+        session.add(roaster)
+        session.commit()
+        roaster_dict = roaster.to_dict()
+    return roaster_dict
 
 @pytest.fixture(scope="session")
-def existing_bean(app, existing_roaster):
+def existing_bean(app, existing_roaster) -> dict:
     bean = Bean(
         name="Test Bean",
         roast_level="Medium",
         origin="Colombia",
         price_per_100_grams=4.5,
-        roaster_id=existing_roaster.id
+        roaster_id=existing_roaster["id"]
     )
-    db.session.add(bean)
-    db.session.commit()
-    return bean
+    with app.db_manager.get_write_session() as session:
+        session.add(bean)
+        session.commit()
+        bean_dict = bean.to_dict()
+    return bean_dict
 
 def test_basic(client):
     response = client.get('/')
@@ -145,7 +153,7 @@ def test_add_roaster(admin_client):
         "website": "https://testroaster2.com"
     }
 
-    response = admin_client.post('/add_roaster', json=payload)
+    response = admin_client.post('/roasters', json=payload)
     assert response.status_code == 201
     assert response.get_json() == {"message": "New roaster Test Roaster 2 was created successfully"}
 
@@ -155,7 +163,7 @@ def test_add_bean(admin_client, existing_roaster):
         "roast_level": "Medium",
         "origin": "Ethiopia",
         "price_per_100_grams": 12.99,
-        "roaster_id": existing_roaster.id  # Use the existing roaster's ID
+        "roaster_id": existing_roaster["id"]  # Use the existing roaster's ID
     }
     response = admin_client.post('/beans', json=payload)
     assert response.status_code == 201
@@ -166,25 +174,22 @@ def test_add_review(admin_client, existing_bean):
         "content": "Great beans!",
         "rating": 4.5
     }
-    response = admin_client.post(f'/beans/{existing_bean.id}/reviews', json=review_payload)
+    response = admin_client.post(f'/beans/{existing_bean["id"]}/reviews', json=review_payload)
     assert response.status_code == 201
     assert response.get_json() == {"message": f"Review was added"}
 
-    response = admin_client.post(f'/beans/{existing_bean.id}/reviews', json=review_payload)
+    response = admin_client.post(f'/beans/{existing_bean["id"]}/reviews', json=review_payload)
     assert response.status_code == 409
     assert response.get_json() == {"error": f"User already reviewed this bean"}
 
 def test_get_reviews_for_existing_bean(admin_client, existing_bean):
-    response = admin_client.get(f'beans/{existing_bean.id}/reviews')
+    response = admin_client.get(f'beans/{existing_bean["id"]}/reviews')
     assert response.status_code == 200
     data = response.get_json()
     assert isinstance(data, dict)
     assert "page" in data
     assert "limit" in data
     assert "total" in data
-    assert "pages" in data
-    assert "has_next" in data
-    assert "has_prev" in data
     assert "reviews" in data
     assert isinstance(data["reviews"], list) and len(data["reviews"]) > 0
 

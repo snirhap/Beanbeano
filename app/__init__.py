@@ -1,7 +1,7 @@
 from flask import Flask, jsonify
 from .config import Config
-from app.models import db
-from app.db import DatabaseManager
+from .models import db
+from .db_manager import DatabaseManager
 
 def create_app(config_obj: Config):
     app = Flask(__name__)

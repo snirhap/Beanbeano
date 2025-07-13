@@ -1,4 +1,4 @@
-from app import create_app, db
+from app import create_app, db_manager
 from app.models import User, Roaster, Bean
 
 app = create_app()

@@ -1,8 +1,6 @@
 import os
 from dotenv import load_dotenv
 
-TEST_DB = os.path.abspath('test_temp.db')
-
 load_dotenv()
 
 class Config:
@@ -20,6 +18,7 @@ class Config:
     READING_REPLICAS = os.getenv("READING_REPLICAS", "2")
 
 class TestConfig(Config):
+    TEST_DB = os.path.abspath('test_temp.db')
     SQLALCHEMY_DATABASE_URI = f"sqlite:///{TEST_DB}"
     TESTING = True
     POSTGRES_PRIMARY_HOST = ""
