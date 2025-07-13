@@ -12,4 +12,4 @@ COPY . .
 
 EXPOSE 8000
 
-CMD ["sh", "-c", "gunicorn run:app --bind 0.0.0.0:${PORT} --workers=1"]
+CMD ["sh", "-c", "gunicorn run:app --bind 0.0.0.0:${APP_PORT} --workers=1"]

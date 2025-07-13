@@ -62,7 +62,7 @@ JWT_SECRET_KEY=supersecretkey
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=postgres
 POSTGRES_DB=beanbeanodb
-PORT=8000
+APP_PORT=8000
 ```
 
 ### Run the server:

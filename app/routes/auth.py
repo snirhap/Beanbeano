@@ -1,7 +1,6 @@
 from functools import wraps
 from flask import Blueprint, current_app, g, make_response, request, jsonify
-from ..models import db, User
-from ..config import Config
+from ..models import User
 import bcrypt
 import jwt
 import datetime
@@ -15,13 +14,15 @@ def register():
         username = data.get('username')
         password = data.get('password')
 
-        if User.query.filter_by(username=username).first():
-            return jsonify({"error": f"User {username} already exist in DB"}), 400
+        with current_app.db_manager.get_read_session() as session:
+            if session.query(User).filter_by(username=username).first():
+                return jsonify({"error": f"User {username} already exist in DB"}), 400
         
         hashed_password = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
         new_user = User(username=username, password_hash=hashed_password)
-        db.session.add(new_user)
-        db.session.commit()
+        with current_app.db_manager.get_write_session() as session:
+            session.add(new_user)
+            session.commit()
         
         return jsonify({"message": f"User {username} was created successfully"}), 201
 
@@ -29,11 +30,16 @@ def register():
 def login():
     if request.method == 'POST':
         data = request.get_json()
-        
         username = data.get('username')
         password = data.get('password')
 
-        user = User.query.filter_by(username=username).first()
+        if not username or not password:
+            return jsonify({"error": "Username and password are required"}), 400
+        
+        with current_app.db_manager.get_read_session() as session:
+            # Fetch the user from the database
+            user = session.query(User).filter_by(username=username).first()
+
         if not user or not bcrypt.checkpw(password=password.encode(), hashed_password=user.password_hash.encode()):
             return jsonify({"error": "Invalid Credentials"}), 401
         
@@ -42,7 +48,7 @@ def login():
             'username': user.username,
             'role': user.role,
             'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=1)
-        }, Config.JWT_SECRET_KEY, algorithm='HS256')
+        }, current_app.config["JWT_SECRET_KEY"], algorithm='HS256')
 
         response = make_response(jsonify({'message': 'Login successful'}))
         response.set_cookie('access_token', jwt_token, httponly=True)
@@ -56,7 +62,7 @@ def jwt_required(f):
         if not token:
             return jsonify({'error': 'Token is missing'}), 401
         try:
-            payload = jwt.decode(token, Config.JWT_SECRET_KEY, algorithms=['HS256'])
+            payload = jwt.decode(token, current_app.config["JWT_SECRET_KEY"], algorithms=['HS256'])
             g.user = payload  # attach user data to request
         except jwt.ExpiredSignatureError:
             return jsonify({'error': 'Token expired'}), 401
@@ -82,9 +88,12 @@ def role_required(required_role):
 @jwt_required
 @role_required('admin')
 def promote_user(user_id):
-    user = User.query.get_or_404(user_id)
-    user.role = 'admin'
-    db.session.commit()
+    with current_app.db_manager.get_write_session() as session:
+        user = session.query(User).get(user_id)
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+        user.role = 'admin'
+        session.commit()
 
     return jsonify({"message": f"{user.username} promoted to admin"})
 

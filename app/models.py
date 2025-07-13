@@ -23,21 +23,32 @@ class Roaster(db.Model):
     def allowed_fields(self):
         return {'name', 'address', 'website'}
 
-    @property
-    def avg_rating(self):
-            ratings = [bean.avg_rating for bean in self.beans if bean.avg_rating is not None]
-            return round(sum(ratings) / len(ratings), 2) if ratings else None
+    def avg_rating(self, session):
+        ratings = []
+        for bean in self.beans:
+            rating = bean.avg_rating(session)
+            if rating is not None:
+                ratings.append(rating)
+        return round(sum(ratings) / len(ratings), 2) if ratings else None
 
     def __repr__(self):
         return f"<Roaster {self.id}: {self.name}>"
 
-    def to_dict(self):
-        return {
+    def to_dict(self, session=None):
+        data = {
             'id': self.id,
             'name': self.name,
-            'avg_rating': self.avg_rating,
-            'beans': [bean.to_dict() for bean in self.beans]
+            'address': self.address,
+            'website': self.website,
+
         }
+        if session:
+            data['average_rating'] = self.avg_rating(session)
+            if self.beans:
+                data['beans'] = [bean.to_dict(session) for bean in self.beans]
+            else:
+                data['beans'] = []
+        return data
 
 class Bean(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -56,20 +67,23 @@ class Bean(db.Model):
     def __repr__(self):
         return f"<Bean {self.id}: {self.name}; Roaster: {self.roaster_id}>"
     
-    def to_dict(self):
-        return {
+    def to_dict(self, session=None):
+        data = {
             'id': self.id,
             'name': self.name,
             'roast_level': self.roast_level,
             'origin': self.origin,
             'price_per_100_grams': self.price_per_100_grams,
             'roaster_id': self.roaster_id,
-            'roaster_name': self.roaster.name if self.roaster else None
+            'roaster_name': self.roaster.name if self.roaster else None,
         }
+        
+        if session:
+            data['average_rating'] = self.avg_rating(session)
+        return data
     
-    @property
-    def avg_rating(self):
-        return db.session.query(func.avg(Review.rating)).filter(Review.bean_id == self.id).scalar()
+    def avg_rating(self, session):
+        return session.query(func.avg(Review.rating)).filter(Review.bean_id == self.id).scalar()
     
 class Review(db.Model):
     id = db.Column(db.Integer, primary_key=True)

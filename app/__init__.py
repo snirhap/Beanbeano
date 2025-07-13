@@ -1,7 +1,7 @@
-from flask import Flask, jsonify, request
-from flask_jwt_extended import JWTManager
+from flask import Flask, jsonify
 from .config import Config
 from app.models import db
+from app.db import DatabaseManager
 
 def create_app(config_obj: Config):
     app = Flask(__name__)
@@ -9,8 +9,8 @@ def create_app(config_obj: Config):
 
     db.init_app(app)
     
-    jwt = JWTManager(app)
-    
+    app.db_manager = DatabaseManager(config_obj)
+
     @app.route('/')
     def home():
         return jsonify({"message": f"Welcome to the Home Brew Coffee Review API!"})
