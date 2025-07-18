@@ -17,9 +17,11 @@ class DatabaseManager:
             self.read_engines = [self.write_engine]
             self.read_sessionsmakers = [self.write_sessionmaker]
         else:
-            # Read(s) and Write DB
-            self.write_engine = self._create_engine(config.POSTGRES_USER, config.POSTGRES_PASSWORD, 
-                                                    config.POSTGRES_PRIMARY_HOST, config.POSTGRES_PORT, 
+            # Read and Write DBs
+            self.write_engine = self._create_engine(config.POSTGRES_USER, 
+                                                    config.POSTGRES_PASSWORD, 
+                                                    config.POSTGRES_PRIMARY_HOST, 
+                                                    config.POSTGRES_PORT, 
                                                     config.POSTGRES_DB_NAME)
             self.write_sessionmaker = sessionmaker(bind=self.write_engine)
             self.read_engines = self._create_read_engines()
@@ -30,10 +32,12 @@ class DatabaseManager:
 
     def _create_read_engines(self):
         read_engines = []
-        for i in range(self.config.READING_REPLICAS):
-            read_engine = self._create_engine(self.config.POSTGRES_USER, self.config.POSTGRES_PASSWORD, 
+        for i in range(1, self.config.READING_REPLICAS + 1):
+            read_engine = self._create_engine(self.config.POSTGRES_USER, 
+                                              self.config.POSTGRES_PASSWORD, 
                                               f'{self.config.POSTGRES_REPLICA_HOST}-{i}', 
-                                              self.config.POSTGRES_PORT, self.config.POSTGRES_DB_NAME)
+                                              self.config.POSTGRES_PORT, 
+                                              self.config.POSTGRES_DB_NAME)
             read_engines.append(read_engine)
         return read_engines
 
