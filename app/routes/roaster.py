@@ -14,6 +14,8 @@ def add_roaster():
         return jsonify({"error": "Missing roaster name"}), 400
 
     with current_app.db_manager.get_write_session() as session:
+        conn = session.connection()
+        print("📝 WRITE connected to:", conn.engine.url.host)
         if session.query(Roaster).filter_by(name=data.get("name")).first():
             return jsonify({"error:": "Roaster already exist"}), 400
         try:
@@ -35,6 +37,8 @@ def get_roaster_from_db(db_session, roaster_id):
 def get_roaster(roaster_id):
     if request.method == 'GET':
         with current_app.db_manager.get_read_session() as session:
+            conn = session.connection()
+            print("📝 READ connected to:", conn.engine.url.host)
             roaster = get_roaster_from_db(session, roaster_id)
             if not roaster:
                 return jsonify({"error": "Roaster doesn't exist"}), 404
