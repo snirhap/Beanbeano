@@ -2,10 +2,6 @@ from functools import wraps
 from flask import Blueprint, current_app, g, make_response, request, jsonify
 from app.routes.auth import jwt_required
 from ..models import func, Bean, Roaster, Review, User
-from ..config import Config
-import bcrypt
-import jwt
-import datetime
 
 bean_bp = Blueprint('beans', __name__)
 

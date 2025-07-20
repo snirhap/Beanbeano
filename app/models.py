@@ -12,6 +12,13 @@ class User(db.Model):
 
     def __repr__(self):
         return f"<User {self.id}: Username: {self.username} | role: {self.role}>"
+    
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "username": self.username,
+            "role": self.role
+        }
 
 class Roaster(db.Model):
     id = db.Column(db.Integer, primary_key=True)
