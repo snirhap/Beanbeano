@@ -49,17 +49,24 @@ def login():
             'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=1)
         }, current_app.config["JWT_SECRET_KEY"], algorithm='HS256')
 
-        response = make_response(jsonify({'message': 'Login successful'}))
-        response.set_cookie('access_token', jwt_token, httponly=True)
-        return response
+        return jsonify({'message': 'Login successful',
+                        'access_token': jwt_token})
 
 def jwt_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        token = request.cookies.get('access_token')
+        auth_header = request.headers.get('Authorization')
 
-        if not token:
+        if not auth_header:
             return jsonify({'error': 'Token is missing'}), 401
+        
+        parts = auth_header.split()
+        
+        if parts[0].lower() != 'bearer' or len(parts) != 2:
+            return jsonify({'error': 'Authorization header must be Bearer token'}), 401
+        
+        token = parts[1]
+        
         try:
             payload = jwt.decode(token, current_app.config["JWT_SECRET_KEY"], algorithms=['HS256'])
             g.user = payload  # attach user data to request

@@ -5,7 +5,6 @@ import pytest
 from app import create_app
 from app.models import db
 from app.config import TestConfig
-from http.cookies import SimpleCookie
 from app.models import Bean, Roaster, User
 
 ADMIN_USERNAME = "s_admin"
@@ -48,35 +47,52 @@ def register_user(client, app, username, password):
 def login(client, username, password):
     return client.post('/login', json={"username": username, "password": password})
 
-def login_and_set_cookie(client, username, password):
-    response = client.post('/login', json={"username": username, "password": password})
-    cookie_header = response.headers.get('Set-Cookie')
-    
-    if cookie_header:
-        cookie = SimpleCookie()
-        cookie.load(cookie_header)
-        if 'access_token' in cookie:
-            token = cookie['access_token'].value
-
-            # Set the cookie in the client for subsequent requests
-            client.set_cookie(
-                domain='localhost',
-                key='access_token',
-                value=token
-            )
-    return response
-
-@pytest.fixture(scope="session")
-def admin_client(client, app):
+def get_admin_token(client, app):
     register_user(client, app, ADMIN_USERNAME, ADMIN_PASSWORD)
-    login_and_set_cookie(client, ADMIN_USERNAME, ADMIN_PASSWORD)
-    return client
+    response = login(client, ADMIN_USERNAME, ADMIN_PASSWORD)
+    return response.get_json().get("access_token")
 
-@pytest.fixture(scope="session")
-def regular_client(client, app):
+def get_regular_user_token(client, app):
     register_user(client, app, "simple_user", "12345678")
-    login_and_set_cookie(client, "simple_user", "12345678")
-    return client
+    response = login(client, "simple_user", "12345678")
+    return response.get_json().get("access_token")
+
+class AuthenticatedUser:
+    def __init__(self, client, token):
+        self.client = client
+        self.token = token
+        self.headers = {
+            "Authorization": f"Bearer {self.token}"
+        }
+    
+    def get(self, path, **kwargs):
+        headers = kwargs.pop("headers", {})
+        merged_headers = {**headers, **self.headers}
+        return self.client.get(path, headers=merged_headers, **kwargs)
+    
+    def post(self, path, **kwargs):
+        headers = kwargs.pop("headers", {})
+        merged_headers = {**headers, **self.headers}
+        return self.client.post(path, headers=merged_headers, **kwargs)
+
+    def patch(self, path, **kwargs):
+        headers = kwargs.pop("headers", {})
+        merged_headers = {**headers, **self.headers}
+        return self.client.patch(path, headers=merged_headers, **kwargs)
+
+    def delete(self, path, **kwargs):
+        headers = kwargs.pop("headers", {})
+        merged_headers = {**headers, **self.headers}
+        return self.client.delete(path, headers=merged_headers, **kwargs)
+
+    def put(self, path, **kwargs):
+        headers = kwargs.pop("headers", {})
+        merged_headers = {**headers, **self.headers}
+        return self.client.put(path, headers=merged_headers, **kwargs)
+    
+@pytest.fixture(scope="session")
+def auth_admin(client, app):
+    return AuthenticatedUser(client=client, token=get_admin_token(client, app))
 
 @pytest.fixture(scope="session")
 def existing_roaster(app) -> dict:
@@ -129,10 +145,8 @@ def test_register_and_login(client, app):
 
     # Check if login was successful
     assert login_response.status_code == 200
-    assert login_response.get_json() == {'message': 'Login successful'}
-    set_cookie = login_response.headers.get('Set-Cookie')
-    assert set_cookie is not None
-    assert 'access_token=' in set_cookie
+    assert 'Login successful' in login_response.get_json().values()
+    assert 'access_token' in login_response.get_json().keys()
 
 def test_login_wrong_password(client, app):
     payload = {
@@ -150,19 +164,18 @@ def test_login_wrong_password(client, app):
     assert response.status_code == 401
     assert response.get_json() == {"error": "Invalid Credentials"}
 
-def test_add_roaster(admin_client):
+def test_add_roaster(auth_admin):
     payload = {
         "name": "Test Roaster 2",
         "address": "Address of Test Roaster 2", 
         "website": "https://testroaster2.com"
     }
 
-    response = admin_client.post('/roasters', json=payload)
+    response = auth_admin.post('/roasters', json=payload)
     assert response.status_code == 201
     assert response.get_json() == {"message": "New roaster Test Roaster 2 was created successfully"}
 
-def test_add_bean(admin_client, existing_roaster):
-    print(f'------ existing_roaster: {existing_roaster} -------')
+def test_add_bean(auth_admin, existing_roaster):
     payload = {
         "name": "Test Bean",
         "roast_level": "Medium",
@@ -170,27 +183,26 @@ def test_add_bean(admin_client, existing_roaster):
         "price_per_100_grams": 12.99,
         "roaster_id": existing_roaster["id"]  # Use the existing roaster's ID
     }
-    response = admin_client.post('/beans', json=payload)
+    response = auth_admin.post('/beans', json=payload)
     assert response.status_code == 201
     assert response.get_json() == {"message": "New bean Test Bean was created successfully"}
 
-def test_add_review(admin_client, existing_bean):
-    print(f'-----------------')
-    print(existing_bean)
+def test_add_review(auth_admin, existing_bean):
     review_payload = {
         "content": "Great beans!",
-        "rating": 4.5
+        "rating": 4.5,
+        "brew_method": "Cold Brew"
     }
-    response = admin_client.post(f'/beans/{existing_bean["id"]}/reviews', json=review_payload)
+    response = auth_admin.post(f'/beans/{existing_bean["id"]}/reviews', json=review_payload)
     assert response.status_code == 201
     assert response.get_json() == {"message": f"Review was added"}
 
-    response = admin_client.post(f'/beans/{existing_bean["id"]}/reviews', json=review_payload)
+    response = auth_admin.post(f'/beans/{existing_bean["id"]}/reviews', json=review_payload)
     assert response.status_code == 409
     assert response.get_json() == {"error": f"User already reviewed this bean"}
 
-def test_get_reviews_for_existing_bean(admin_client, existing_bean):
-    response = admin_client.get(f'beans/{existing_bean["id"]}/reviews')
+def test_get_reviews_for_existing_bean(auth_admin, existing_bean):
+    response = auth_admin.get(f'beans/{existing_bean["id"]}/reviews')
     assert response.status_code == 200
     data = response.get_json()
     assert isinstance(data, dict)
@@ -200,6 +212,6 @@ def test_get_reviews_for_existing_bean(admin_client, existing_bean):
     assert "reviews" in data
     assert isinstance(data["reviews"], list) and len(data["reviews"]) > 0
 
-def test_get_reviews_for_nonexistent_bean(admin_client):
-    response = admin_client.get(f'beans/123456789/reviews')
+def test_get_reviews_for_nonexistent_bean(auth_admin):
+    response = auth_admin.get(f'beans/123456789/reviews')
     assert response.status_code == 404

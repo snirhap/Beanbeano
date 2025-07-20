@@ -74,7 +74,6 @@ def paginated_data(f):
         return f(*args, **kwargs)
     return decorated
 
-
 @bean_bp.route('/beans/<int:bean_id>/reviews', methods=['GET', 'POST'])
 @jwt_required
 @paginated_data
