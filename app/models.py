@@ -64,9 +64,6 @@ class Bean(db.Model):
     @property
     def allowed_fields(self):
         return {'name', 'roast_level', 'origin', 'price_per_100_grams'}
-
-    def __repr__(self):
-        return f"<Bean {self.id}: {self.name}; Roaster: {self.roaster_id}>"
     
     def to_dict(self, session=None):
         data = {
@@ -94,13 +91,19 @@ class Review(db.Model):
     bean = db.relationship('Bean', back_populates='reviews')
     content = db.Column(db.String(150), nullable=False)
     rating = db.Column(db.Float, nullable=False)
+    brew_method = db.Column(db.String(150), nullable=False)
 
     @property
     def allowed_fields(self):
-        return {'content', 'rating'}
+        return {'content', 'rating', 'brew_method'}
     
     def __repr__(self):
-        return f"Review {self.id}: User: {self.user_id}; Bean: {self.bean_id}; Rating: {self.rating}; Content: {self.content}"
+        return f"Review {self.id}: \
+            User: {self.user_id}; \
+            Bean: {self.bean_id}; \
+            Rating: {self.rating}; \
+            Content: {self.content}; \
+            Brew Method: {self.brew_method}"
     
     def to_dict(self):
         return {
@@ -109,5 +112,6 @@ class Review(db.Model):
             'username': self.user.username if self.user else None,
             'bean_id': self.bean_id,
             'content': self.content,
-            'rating': self.rating
+            'rating': self.rating,
+            'brew_method': self.brew_method
         }

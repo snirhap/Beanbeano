@@ -1,7 +1,7 @@
 from functools import wraps
 from flask import Blueprint, current_app, g, make_response, request, jsonify
 from app.routes.auth import jwt_required
-from ..models import db, func, Bean, Roaster, Review, User
+from ..models import func, Bean, Roaster, Review, User
 from ..config import Config
 import bcrypt
 import jwt
@@ -88,8 +88,12 @@ def bean_reviews(bean_id, page, per_page):
             bean = session.query(Bean).get(bean_id)
             if not bean:
                 return jsonify({"error": "Bean not found"}), 404 
-            
             query = session.query(Review).filter_by(bean_id=bean_id)
+
+            brew_method = request.args.get("brew_method")
+            if brew_method:
+                query = query.filter(Review.brew_method == brew_method)
+
             total_reviews_count = query.count()
             reviews = query.offset((page - 1) * per_page).limit(per_page).all()
 
@@ -107,8 +111,9 @@ def bean_reviews(bean_id, page, per_page):
 
         content = data.get("content")
         rating = data.get("rating")
+        brew_method = data.get("brew_method")
 
-        if not content or not isinstance(rating, (int, float)):
+        if not content or not isinstance(rating, (int, float)) or not brew_method:
             return jsonify({"error": "Invalid review data"}), 400
         
         if not (1 <= rating <= 5):
@@ -131,7 +136,7 @@ def bean_reviews(bean_id, page, per_page):
                 return jsonify({"error": "User already reviewed this bean"}), 409
 
             try:
-                new_review = Review(user_id=user.id, bean_id=bean.id, content=content, rating=rating)
+                new_review = Review(user_id=user.id, bean_id=bean.id, content=content, rating=rating, brew_method=brew_method)
                 session.add(new_review)
                 return jsonify({"message": f'Review was added'}), 201
             except Exception as e:
