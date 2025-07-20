@@ -27,33 +27,33 @@ def add_roaster():
 def get_roaster_from_db(db_session, roaster_id):
     roaster = db_session.query(Roaster).filter_by(id=roaster_id).first()
     if not roaster:
-        return None
-    return roaster
+        return None, jsonify({"error": "Roaster doesn't exist"}), 404
+    return roaster, None, None
     
 @roaster_bp.route('/roasters/<int:roaster_id>', methods=['GET', 'PATCH', 'DELETE'])
 @jwt_required
 def get_roaster(roaster_id):
     if request.method == 'GET':
         with current_app.db_manager.get_read_session() as session:
-            roaster = get_roaster_from_db(session, roaster_id)
-            if not roaster:
-                return jsonify({"error": "Roaster doesn't exist"}), 404
+            roaster, error_message, status = get_roaster_from_db(session, roaster_id)
+            if error_message:
+                return error_message, status
             return jsonify(roaster.to_dict()), 200
     elif request.method == 'PATCH':
         data = request.get_json()
         with current_app.db_manager.get_write_session() as session:
-            roaster = get_roaster_from_db(session, roaster_id)
-            if not roaster:
-                return jsonify({"error": "Roaster doesn't exist"}), 404
+            roaster, error_message, status  = get_roaster_from_db(session, roaster_id)
+            if error_message:
+                return error_message, status
             for key, value in data.items():
                 if key in roaster.allowed_fields:
                     setattr(roaster, key, value)
             return jsonify({'message': 'Roaster updated', 'roaster': roaster.to_dict()}), 200
     elif request.method == 'DELETE':
         with current_app.db_manager.get_write_session() as session:
-            roaster = get_roaster_from_db(session, roaster_id)
-            if not roaster:
-                return jsonify({"error": "Roaster doesn't exist"}), 404
+            roaster, error_message, status = get_roaster_from_db(session, roaster_id)
+            if error_message:
+                return error_message, status
             session.delete(roaster)
             return jsonify({"message": f"Roaster {roaster.name} was deleted"}), 200
 
@@ -61,7 +61,6 @@ def get_roaster(roaster_id):
 def get_all_roasters():
     with current_app.db_manager.get_read_session() as session:
         roasters = session.query(Roaster).all() 
-
         if roasters:
             return jsonify([r.to_dict() for r in roasters]), 200
         return jsonify({"message": f"There are no roasters in DB"}), 404
