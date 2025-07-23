@@ -9,6 +9,7 @@ class User(db.Model):
     password_hash = db.Column(db.String(128), nullable=False)
     role = db.Column(db.String(128), nullable=False, default='viewer')
     reviews = db.relationship('Review', back_populates='user', lazy=True, cascade='all, delete-orphan')
+    likes = db.relationship('Like', back_populates='user', lazy=True, cascade='all, delete-orphan')
 
     def __repr__(self):
         return f"<User {self.id}: Username: {self.username} | role: {self.role}>"
@@ -89,7 +90,13 @@ class Bean(db.Model):
     
     def avg_rating(self, session):
         return session.query(func.avg(Review.rating)).filter(Review.bean_id == self.id).scalar()
-    
+
+class Like(db.Model):
+    review_id = db.Column(db.Integer, db.ForeignKey('review.id'), primary_key=True)
+    review = db.relationship('Review', back_populates='likes')
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)
+    user = db.relationship('User', back_populates='likes')
+
 class Review(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
@@ -99,10 +106,16 @@ class Review(db.Model):
     content = db.Column(db.String(150), nullable=False)
     rating = db.Column(db.Float, nullable=False)
     brew_method = db.Column(db.String(150), nullable=False)
+    likes = db.relationship('Like', back_populates='review', cascade='all, delete-orphan')
+
 
     @property
     def allowed_fields(self):
         return {'content', 'rating', 'brew_method'}
+    
+    @property
+    def num_likes(self):
+        return len(self.likes)
     
     def __repr__(self):
         return f"Review {self.id}: \
@@ -110,7 +123,8 @@ class Review(db.Model):
             Bean: {self.bean_id}; \
             Rating: {self.rating}; \
             Content: {self.content}; \
-            Brew Method: {self.brew_method}"
+            Brew Method: {self.brew_method}; \
+            Likes: {self.num_likes}"
     
     def to_dict(self):
         return {
@@ -120,5 +134,6 @@ class Review(db.Model):
             'bean_id': self.bean_id,
             'content': self.content,
             'rating': self.rating,
-            'brew_method': self.brew_method
+            'brew_method': self.brew_method,
+            'likes': self.num_likes
         }
