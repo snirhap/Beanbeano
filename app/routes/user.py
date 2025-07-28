@@ -37,3 +37,9 @@ def favorite_brew_methods(user_id):
         brew_methods[r.brew_method] = brew_methods.get(r.brew_method, 0) + 1
 
     return jsonify({"brew_methods": dict(sorted(brew_methods.items(), key=lambda x: x[1], reverse=True))}), 200
+
+@user_bp.route('/users/<int:user_id>/favorite_beans', methods=['GET'])
+def favorite_beans(user_id):
+    user, _ = fetch_user_with_reviews(user_id)
+    fav_beans = [fb.bean.to_dict() for fb in user.favorite_beans]
+    return jsonify({"favorite_beans": fav_beans}), 200

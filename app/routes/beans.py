@@ -1,7 +1,7 @@
 from functools import wraps
 from flask import Blueprint, current_app, g, make_response, request, jsonify
 from app.routes.auth import jwt_required
-from ..models import func, Bean, Roaster, Review, User
+from ..models import FavoriteBean, func, Bean, Roaster, Review, User
 
 bean_bp = Blueprint('beans', __name__)
 
@@ -136,3 +136,25 @@ def bean_reviews(bean_id, page, per_page):
                 return jsonify({"message": f'Review was added'}), 201
             except Exception as e:
                 return jsonify({"error": f"Internal server error. Error: {e}"}), 500
+            
+
+@bean_bp.route('/beans/<int:bean_id>/favorite/toggle', methods=['POST'])
+@jwt_required
+def favorite_bean(bean_id):
+    user_id = g.user.get("user_id")
+    with current_app.db_manager.get_write_session() as session:
+        bean = session.query(Bean).get(bean_id)
+        if not bean:
+            return jsonify({"error": "Bean doesn't exist"}), 404
+    
+        already_favorited = session.query(FavoriteBean).filter_by(user_id=user_id, bean_id=bean_id).first()
+        
+        if already_favorited:
+            session.delete(already_favorited)
+            session.commit()
+            return jsonify({"message": f'Favorite bean removed'}), 200
+
+        new_favorite = FavoriteBean(user_id=user_id, bean_id=bean_id)
+        session.add(new_favorite)
+        session.commit()
+        return jsonify({"message": f'Favorite bean added'}), 201

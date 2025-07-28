@@ -10,10 +10,8 @@ class User(db.Model):
     role = db.Column(db.String(128), nullable=False, default='viewer')
     reviews = db.relationship('Review', back_populates='user', lazy=True, cascade='all, delete-orphan')
     likes = db.relationship('Like', back_populates='user', lazy=True, cascade='all, delete-orphan')
+    favorite_beans = db.relationship('FavoriteBean', back_populates='user', lazy=True, cascade='all, delete-orphan')
 
-    def __repr__(self):
-        return f"<User {self.id}: Username: {self.username} | role: {self.role}>"
-    
     def to_dict(self):
         return {
             "id": self.id,
@@ -68,7 +66,8 @@ class Bean(db.Model):
     roaster_id = db.Column(db.Integer, db.ForeignKey('roaster.id'), nullable=False)
     roaster = db.relationship('Roaster', back_populates='beans')
     reviews = db.relationship('Review', back_populates='bean', cascade='all, delete-orphan')
-    
+    favorited_by = db.relationship('FavoriteBean', back_populates='bean', cascade='all, delete-orphan')
+
     @property
     def allowed_fields(self):
         return {'name', 'roast_level', 'origin', 'price_per_100_grams'}
@@ -91,6 +90,13 @@ class Bean(db.Model):
     def avg_rating(self, session):
         return session.query(func.avg(Review.rating)).filter(Review.bean_id == self.id).scalar()
 
+class FavoriteBean(db.Model):
+    __tablename__ = 'favorite_bean'
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)
+    user = db.relationship('User', back_populates='favorite_beans')
+    bean_id = db.Column(db.Integer, db.ForeignKey('bean.id'), primary_key=True)
+    bean = db.relationship('Bean', back_populates='favorited_by')
+
 class Like(db.Model):
     review_id = db.Column(db.Integer, db.ForeignKey('review.id'), primary_key=True)
     review = db.relationship('Review', back_populates='likes')
@@ -107,7 +113,6 @@ class Review(db.Model):
     rating = db.Column(db.Float, nullable=False)
     brew_method = db.Column(db.String(150), nullable=False)
     likes = db.relationship('Like', back_populates='review', cascade='all, delete-orphan')
-
 
     @property
     def allowed_fields(self):
