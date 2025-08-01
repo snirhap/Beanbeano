@@ -95,6 +95,10 @@ def auth_admin(client, app):
     return AuthenticatedUser(client=client, token=get_admin_token(client, app))
 
 @pytest.fixture(scope="session")
+def auth_user(client, app):
+    return AuthenticatedUser(client=client, token=get_regular_user_token(client, app))
+
+@pytest.fixture(scope="session")
 def existing_roaster(app) -> dict:
     roaster = Roaster(
         name="Test Roaster",
@@ -200,6 +204,24 @@ def test_add_review(auth_admin, existing_bean):
     response = auth_admin.post(f'/beans/{existing_bean["id"]}/reviews', json=review_payload)
     assert response.status_code == 409
     assert response.get_json() == {"error": f"User already reviewed this bean"}
+
+def test_like_dislike_review(auth_admin, auth_user, existing_bean):
+    review_payload = {
+        "content": "Nice cold brew with this one!",
+        "rating": 4.1,
+        "brew_method": "Cold Brew"
+    }
+    response = auth_user.post(f'/beans/{existing_bean["id"]}/reviews', json=review_payload)
+    assert response.status_code == 201
+    assert response.get_json() == {"message": f"Review was added"}
+
+    response = auth_admin.post(f'/reviews/1/like/toggle')
+    assert response.status_code == 201
+    assert response.get_json() == {"message": f"Review liked"}
+
+    response = auth_admin.post(f'/reviews/1/like/toggle')
+    assert response.status_code == 200
+    assert response.get_json() == {"message": f"Like removed"}
 
 def test_get_reviews_for_existing_bean(auth_admin, existing_bean):
     response = auth_admin.get(f'beans/{existing_bean["id"]}/reviews')
