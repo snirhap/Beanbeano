@@ -31,7 +31,7 @@ services:
     env_file:
       - .env
     volumes:
-      - primary_pgdata:/var/lib/postgresql/data
+      - primary_pgdata:/bitnami/postgresql
     environment:
       - POSTGRESQL_REPLICATION_MODE=master
       - POSTGRESQL_LOGGING_COLLECTOR=true
@@ -57,7 +57,7 @@ services:
       - POSTGRESQL_LOG_MIN_DURATION_STATEMENT=0    # Log all statements; set >0 ms to log slow queries only
       - POSTGRESQL_LOG_CONNECTIONS=true            # Log connection attempts
     volumes:
-      - replica_pgdata_1:/var/lib/postgresql/data
+      - replica_pgdata_1:/bitnami/postgresql
     ports:
       - "5433:5432"
     depends_on:
@@ -80,7 +80,7 @@ services:
       - POSTGRESQL_LOG_MIN_DURATION_STATEMENT=0    # Log all statements; set >0 ms to log slow queries only
       - POSTGRESQL_LOG_CONNECTIONS=true            # Log connection attempts
     volumes:
-      - replica_pgdata_2:/var/lib/postgresql/data
+      - replica_pgdata_2:/bitnami/postgresql
     ports:
       - "5434:5432"
     depends_on:
