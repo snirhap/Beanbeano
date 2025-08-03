@@ -12,6 +12,8 @@ services:
 
   web:
     build: .
+    volumes:
+      - .:/app
     expose:
       - "8000"
     env_file:
